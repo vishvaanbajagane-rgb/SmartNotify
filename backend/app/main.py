@@ -3,10 +3,6 @@ SmartNotify AI — FastAPI entrypoint.
 
 Run locally:
     uvicorn app.main:app --reload --port 8000
-
-Modules will register their routers here as they're built:
-    routes_upload, routes_predict, routes_image, routes_voice,
-    routes_analytics, routes_export
 """
 from contextlib import asynccontextmanager
 
@@ -14,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_health import router as health_router
+from app.api.routes_upload import router as upload_router
 from app.core.config import get_settings
 from app.db.session import init_db
 
@@ -22,10 +19,8 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: ensure tables exist (dev convenience; use Alembic in prod)
     init_db()
     yield
-    # Shutdown: nothing to clean up yet
 
 
 app = FastAPI(
@@ -44,14 +39,14 @@ app.add_middleware(
 )
 
 app.include_router(health_router, prefix=settings.API_V1_PREFIX)
+app.include_router(upload_router, prefix=settings.API_V1_PREFIX)
 
-# --- Future module routers (uncommented as each module is built) ---
-# app.include_router(upload_router, prefix=settings.API_V1_PREFIX)
-# app.include_router(predict_router, prefix=settings.API_V1_PREFIX)
-# app.include_router(image_router, prefix=settings.API_V1_PREFIX)
-# app.include_router(voice_router, prefix=settings.API_V1_PREFIX)
-# app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)
-# app.include_router(export_router, prefix=settings.API_V1_PREFIX)
+# --- Future phase routers (uncommented as each phase is built) ---
+# app.include_router(predict_router, prefix=settings.API_V1_PREFIX)      # Phase 5
+# app.include_router(image_router, prefix=settings.API_V1_PREFIX)        # Phase 10
+# app.include_router(voice_router, prefix=settings.API_V1_PREFIX)        # Phase 11
+# app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)    # Phase 12
+# app.include_router(export_router, prefix=settings.API_V1_PREFIX)       # Phase 5
 
 
 @app.get("/")
@@ -61,3 +56,20 @@ def root() -> dict:
         "docs": "/docs",
         "health": f"{settings.API_V1_PREFIX}/health",
     }
+
+from app.api.routes_health import router as health_router
+from app.api.routes_upload import router as upload_router   # ADD THIS
+...
+app.include_router(health_router, prefix=settings.API_V1_PREFIX)
+app.include_router(upload_router, prefix=settings.API_V1_PREFIX)   # ADD THIS
+
+from app.api.routes_features import router as features_router   # ADD THIS
+...
+app.include_router(upload_router, prefix=settings.API_V1_PREFIX)
+app.include_router(features_router, prefix=settings.API_V1_PREFIX)   # ADD THIS
+
+from app.api.routes_export import router as export_router
+from app.api.routes_predict import router as predict_router
+...
+app.include_router(predict_router, prefix=settings.API_V1_PREFIX)
+app.include_router(export_router, prefix=settings.API_V1_PREFIX)

@@ -1,0 +1,9 @@
+sender,sender_type,content,message_type,group_name,forward_count,timestamp,is_verified_business
+Mom,contact,Don't forget to call grandma today,text,,0,2026-08-01 09:15:00,false
+HDFC Bank,business,Your OTP for transaction is 482910. Do not share this with anyone.,text,,0,2026-08-01 09:20:00,true
+Family Group,group,Good morning everyone! Have a great day,text,Family Group,3,2026-08-01 07:00:00,false
+Unknown Number,contact,Congratulations! You have won a lottery of $10000. Click here to claim now,text,,45,2026-08-01 10:05:00,false
+John,contact,Hey are we still on for lunch tomorrow?,text,,0,2026-08-01 11:30:00,false
+Office Team,group,Reminder: Sprint planning meeting at 3 PM today,text,Office Team,1,2026-08-01 08:45:00,false
+Swiggy,business,Your order #4521 has been delivered. Enjoy your meal!,text,,0,2026-08-01 12:10:00,true
+Unknown Number,contact,URGENT! Your bank account will be blocked. Verify immediately at this link,text,,60,2026-08-01 12:45:00,false

@@ -8,8 +8,6 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field
 
 
-# --- Enums (mirror db_models.py) ---
-
 class Action(str, Enum):
     NOTIFY = "Notify"
     DIGEST = "Digest"
@@ -28,8 +26,6 @@ class MessageType(str, Enum):
     VOICE = "voice"
 
 
-# --- Sender ---
-
 class SenderOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -39,8 +35,6 @@ class SenderOut(BaseModel):
     trust_score: float
     is_verified_business: bool
 
-
-# --- Message ---
 
 class MessageBase(BaseModel):
     content: str
@@ -63,8 +57,6 @@ class MessageOut(MessageBase):
     timestamp: datetime
 
 
-# --- Prediction ---
-
 class PredictionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -80,7 +72,6 @@ class PredictionOut(BaseModel):
 
 
 class PredictionRequest(BaseModel):
-    """Used by POST /predict for a single ad-hoc message."""
     content: str
     sender_name: str
     sender_type: SenderType
@@ -93,8 +84,6 @@ class BatchPredictResponse(BaseModel):
     total_processed: int
     predictions: list[PredictionOut]
 
-
-# --- Analytics ---
 
 class ActionBreakdown(BaseModel):
     Notify: int
@@ -114,8 +103,6 @@ class AnalyticsSummary(BaseModel):
     top_flagged_senders: list[FlaggedSender]
 
 
-# --- Media analysis ---
-
 class OCRResult(BaseModel):
     extracted_text: str
     detected_language: str | None = None
@@ -127,10 +114,33 @@ class TranscriptionResult(BaseModel):
     language: str
     duration_seconds: float
 
-
-# --- Upload ---
-
+class MessageFeaturesOut(BaseModel):
+    message_id: str
+    text_length: int
+    word_count: int
+    exclamation_count: int
+    question_count: int
+    caps_ratio: float
+    digit_ratio: float
+    has_url: bool
+    url_count: int
+    has_phone_number: bool
+    has_currency_symbol: bool
+    urgency_keyword_count: int
+    scam_keyword_count: int
+    spam_keyword_count: int
+    sender_type: str
+    is_group_message: bool
+    is_business_sender: bool
+    is_verified_business: bool
+    sender_trust_score: float
+    forward_count: int
+    message_type: str
+    hour_of_day: int
+    is_late_night: bool
+    
 class UploadResponse(BaseModel):
     filename: str
     rows_ingested: int
+    rows_skipped: int
     message: str
