@@ -1,24 +1,62 @@
-# Environment variables
-.env
-.env.*
-
+# =========================
 # Python
+# =========================
 __pycache__/
 *.py[cod]
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+
+# Virtual environments
 .venv/
 venv/
+env/
 
-# Node
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+.env.local
+*.env
+
+# =========================
+# ML Models
+# =========================
+backend/ml_models/*.bin
+backend/ml_models/*.pkl
+backend/ml_models/*.pt
+
+# =========================
+# Node / Next.js
+# =========================
 node_modules/
 .next/
+out/
+frontend/.turbo/
 
+# =========================
+# Output
+# =========================
+output/
+ml_models/
+backend/output/output.csv
+
+# =========================
 # IDE
+# =========================
 .vscode/
 .idea/
 
-# Output
-output/
-ml_models/
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
 
+# =========================
 # Logs
+# =========================
 *.log

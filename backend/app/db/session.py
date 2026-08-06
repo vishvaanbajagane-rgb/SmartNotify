@@ -16,12 +16,10 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, futu
 
 
 class Base(DeclarativeBase):
-    """Base class for all ORM models."""
     pass
 
 
 def get_db() -> Generator[Session, None, None]:
-    """FastAPI dependency: yields a DB session and guarantees it's closed."""
     db = SessionLocal()
     try:
         yield db
@@ -30,9 +28,5 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """Create all tables. Called on app startup for local/dev convenience.
-
-    In production, prefer Alembic migrations over this.
-    """
-    from app.models import db_models  # noqa: F401  (ensures models are registered)
+    from app.models import db_models  # noqa: F401
     Base.metadata.create_all(bind=engine)

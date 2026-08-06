@@ -30,7 +30,5 @@ services:
       db:
         condition: service_healthy
 
-  # frontend service will be added in the frontend scaffold module
-
 volumes:
-  smartnotify_pgdata:
+  smartnotify_pgdata:x

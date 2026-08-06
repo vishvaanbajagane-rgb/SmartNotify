@@ -6,6 +6,7 @@ POST /predict/batch     — run the decision engine over every ingested message
 GET  /predict/{msg_id}  — fetch a stored prediction
 """
 from fastapi import APIRouter, Depends, HTTPException
+from SmartNotify.backend.app import db
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -65,9 +66,12 @@ def predict_single(payload: PredictionRequest, db: Session = Depends(get_db)) ->
         forward_count=payload.forward_count,
     )
     db.flush()
-    message.sender = sender  # ensure the relationship is populated for the decision engine
 
-    result = decide(message, db=db)
+
+message.sender = sender  # ensure the relationship is populated
+
+ result = decide(message, db=db)
+
     response = _save_and_build_response(db, message.id, result)
     db.commit()
     return response
@@ -84,7 +88,9 @@ def predict_batch(db: Session = Depends(get_db)) -> BatchPredictResponse:
 
     predictions: list[PredictionOut] = []
     for message in messages:
+
         result = decide(message, db=db)
+
         predictions.append(_save_and_build_response(db, message.id, result))
 
     db.commit()
