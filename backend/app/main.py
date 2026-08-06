@@ -61,3 +61,19 @@ def root() -> dict:
         "docs": "/docs",
         "health": f"{settings.API_V1_PREFIX}/health",
     }
+
+from app.api.routes_auth import router as auth_router
+from app.api.routes_historical import router as historical_router
+from app.api.routes_trust import router as trust_router
+from app.api.routes_spam import router as spam_router
+...
+app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
+app.include_router(historical_router, prefix=settings.API_V1_PREFIX)
+app.include_router(trust_router, prefix=settings.API_V1_PREFIX)
+app.include_router(spam_router, prefix=settings.API_V1_PREFIX)
+
+from app.api.routes_image import router as image_router
+from app.api.routes_scam import router as scam_router
+...
+app.include_router(scam_router, prefix=settings.API_V1_PREFIX)
+app.include_router(image_router, prefix=settings.API_V1_PREFIX)

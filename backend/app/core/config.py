@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     # Comma-separated origins allowed to call this API (your Next.js frontend)
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    # --- Authentication (JWT) ---
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
+    
     # --- Database ---
     # Example: postgresql+psycopg2://user:password@localhost:5432/smartnotify
     DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/smartnotify"

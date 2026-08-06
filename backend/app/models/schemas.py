@@ -5,7 +5,7 @@ Keep these in sync with frontend/lib/types.ts — they are the API contract.
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 # --- Enums (mirror db_models.py) ---
@@ -134,3 +134,66 @@ class UploadResponse(BaseModel):
     filename: str
     rows_ingested: int
     message: str
+
+class SimilarMessageOut(BaseModel):
+    message_id: str
+    content: str
+    similarity: float
+    past_action: str | None = None
+
+
+class HistoricalRebuildResponse(BaseModel):
+    messages_indexed: int
+    message: str
+
+class SenderTrustOut(BaseModel):
+    sender_id: str
+    sender_name: str
+    trust_score: float
+    message_count: int
+    mute_rate: float
+    notify_rate: float
+    basis: str
+
+class SpamCheckOut(BaseModel):
+    content: str
+    ml_spam_probability: float
+
+    class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8)
+    full_name: str | None = None
+
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: str
+    full_name: str | None = None
+    is_active: bool
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserOut
+
+class ScamCheckOut(BaseModel):
+    content: str
+    ml_scam_probability: float
+
+class ImageAnalysisResponse(BaseModel):
+    message_id: str
+    ocr: OCRResult
+    action: Action
+    reason: str
+    confidence_score: float
+    scam_probability: float
+    spam_probability: float
+    urgency_score: float
