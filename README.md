@@ -11,12 +11,12 @@ Built for the **Message Notification Router AI Challenge**.
 WhatsApp overloads users with messages from friends, family, groups, and businesses. SmartNotify AI decides — per message — whether it deserves an **immediate notification**, should be **bundled into a digest**, or should be **silently muted**, based on:
 
 - Message content & intent
-- Sender/business trust score
-- User's historical interaction pattern with that sender/group
+- Sender/business trust score (learned from real history, not just a static default)
+- User's historical interaction pattern with that sender/group (via semantic similarity search)
 - Group context (broadcast vs. personal)
-- Forward count / spam & scam indicators
+- Forward count / trained spam & scam classifiers
 - Urgency signals
-- Multimedia content (images via OCR, voice notes via transcription)
+- Multimedia content (images via OCR, voice notes via Whisper transcription)
 
 Every decision ships with a **confidence score** and a **human-readable reason**, making the system explainable rather than a black box.
 
@@ -31,34 +31,35 @@ Every decision ships with a **confidence score** and a **human-readable reason**
 | Charts | Recharts |
 | Backend | FastAPI (Python 3.11+) |
 | Database | PostgreSQL |
+| Authentication | JWT (python-jose) + bcrypt (passlib) |
 | Embeddings / Semantic Search | Sentence Transformers + FAISS |
 | Speech-to-Text | Whisper (local, `openai-whisper`) |
-| OCR | EasyOCR |
-| Image Preprocessing | OpenCV |
-| Classical ML (scam/spam/urgency scoring) | Scikit-learn |
+| OCR | EasyOCR + OpenCV preprocessing |
+| Spam / Scam Classification | Scikit-learn (TF-IDF + Logistic Regression) |
 
-All ML components run **locally / open-source** — no paid API key is strictly required.
+All ML components run **locally / open-source**. Sentence-Transformers, Whisper, and EasyOCR download free model weights from their respective hosts on first use (needs internet once); scikit-learn's spam/scam classifiers train instantly offline on bundled seed data.
 
 ---
 
 ## 3. Build Plan — 15 Phases
 
-This project is being built phase by phase, not all at once. Each phase is fully coded and tested (I run the code before handing it over, not just write it) before moving to the next.
+Every phase below marked ✅ has been fully coded **and tested** (I run the actual code — endpoint calls, real image/audio processing, real DB writes — before handing it over, not just written and assumed correct).
 
 | Phase | Name | Status |
 |---|---|---|
-| 1 | Project Foundation | ✅ Done — FastAPI app, config, Docker Compose w/ Postgres |
-| 2 | Database | ✅ Done — SQLAlchemy models (Sender, Message, Prediction, UserPreference, InteractionHistory), Pydantic schemas |
-| 3 | Dataset Ingestion | ✅ Done — CSV upload endpoint, flexible column mapping, tested end-to-end |
-| 4 | Feature Engineering | ⏳ Next |
-| 5 | Decision Engine | ⏳ Pending |
-| 6 | Historical Retrieval (FAISS) | ⏳ Pending |
-| 7 | Business Trust | ⏳ Pending |
-| 8 | Spam Detection | ⏳ Pending |
-| 9 | Scam Detection | ⏳ Pending |
-| 10 | OCR | ⏳ Pending |
-| 11 | Whisper (Voice) | ⏳ Pending |
-| 12 | Analytics | ⏳ Pending |
+| 1 | Project Foundation | ✅ Done |
+| 2 | Database | ✅ Done |
+| 3 | Dataset Ingestion | ✅ Done |
+| 4 | Feature Engineering | ✅ Done |
+| 5 | Decision Engine | ✅ Done |
+| 6 | Historical Retrieval (FAISS) | ✅ Done |
+| 7 | Business Trust | ✅ Done |
+| 8 | Spam Detection | ✅ Done |
+| 9 | Scam Detection | ✅ Done |
+| 10 | OCR | ✅ Done |
+| 11 | Whisper (Voice) | ✅ Done |
+| — | Authentication (register/login/JWT) | ✅ Done — added ahead of schedule for frontend readiness |
+| 12 | Analytics | ⏳ Next |
 | 13 | Frontend | ⏳ Pending |
 | 14 | Deployment | ⏳ Pending |
 | 15 | Optimization | ⏳ Pending |
@@ -67,131 +68,108 @@ Say **"next"** at any time and I'll deliver the next phase — full code in copy
 
 ---
 
-## 4. Project Structure (current state)
+## 4. Project Structure (current state — only files that actually exist)
 
 ```
 smartnotify-ai/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py                        [Phase 1, updated Phase 3]
+│   │   ├── main.py                        [Phase 1 → updated through Phase 11]
+│   │   │
 │   │   ├── api/
-│   │   │   ├── routes_health.py           [Phase 1] ✅
-│   │   │   ├── routes_upload.py           [Phase 3] ✅
-│   │   │   ├── routes_predict.py          [Phase 5]  pending
-│   │   │   ├── routes_image.py            [Phase 10] pending
-│   │   │   ├── routes_voice.py            [Phase 11] pending
-│   │   │   ├── routes_analytics.py        [Phase 12] pending
-│   │   │   └── routes_export.py           [Phase 5]  pending
+│   │   │   ├── routes_health.py           [Phase 1]
+│   │   │   ├── routes_upload.py           [Phase 3]
+│   │   │   ├── routes_features.py         [Phase 4]
+│   │   │   ├── routes_predict.py          [Phase 5 → updated Phase 6]
+│   │   │   ├── routes_export.py           [Phase 5]
+│   │   │   ├── routes_historical.py       [Phase 6]
+│   │   │   ├── routes_trust.py            [Phase 7]
+│   │   │   ├── routes_spam.py             [Phase 8]
+│   │   │   ├── routes_scam.py             [Phase 9]
+│   │   │   ├── routes_image.py            [Phase 10]
+│   │   │   ├── routes_voice.py            [Phase 11]
+│   │   │   └── routes_auth.py             [Authentication]
+│   │   │
 │   │   ├── services/
-│   │   │   ├── ingestion_service.py       [Phase 3]  ✅
-│   │   │   ├── feature_engineering.py     [Phase 4]  pending
-│   │   │   ├── decision_engine.py         [Phase 5]  pending
-│   │   │   ├── confidence_scoring.py      [Phase 5]  pending
-│   │   │   ├── reason_generator.py        [Phase 5]  pending
-│   │   │   ├── historical_retrieval.py    [Phase 6]  pending
-│   │   │   ├── business_trust.py          [Phase 7]  pending
-│   │   │   ├── spam_detection.py          [Phase 8]  pending
-│   │   │   ├── scam_detection.py          [Phase 9]  pending
-│   │   │   ├── ocr_service.py             [Phase 10] pending
-│   │   │   └── voice_service.py           [Phase 11] pending
+│   │   │   ├── ingestion_service.py       [Phase 3]
+│   │   │   ├── feature_engineering.py     [Phase 4]
+│   │   │   ├── decision_engine.py         [Phase 5 → updated Phases 6, 7, 8, 9]
+│   │   │   ├── confidence_scoring.py      [Phase 5]
+│   │   │   ├── reason_generator.py        [Phase 5 → updated Phase 6]
+│   │   │   ├── historical_retrieval.py    [Phase 6]
+│   │   │   ├── business_trust.py          [Phase 7]
+│   │   │   ├── spam_detection.py          [Phase 8]
+│   │   │   ├── scam_detection.py          [Phase 9]
+│   │   │   ├── ocr_service.py             [Phase 10]
+│   │   │   └── voice_service.py           [Phase 11]
+│   │   │
 │   │   ├── models/
-│   │   │   ├── db_models.py               [Phase 2]  ✅
-│   │   │   └── schemas.py                 [Phase 2, updated each phase] ✅
+│   │   │   ├── db_models.py               [Phase 2 → updated Authentication]
+│   │   │   └── schemas.py                 [Phase 2 → updated through Phase 11]
+│   │   │
 │   │   ├── repositories/
-│   │   │   └── message_repository.py      [Phase 3]  ✅
+│   │   │   ├── message_repository.py      [Phase 3 → updated Phases 4, 7]
+│   │   │   ├── prediction_repository.py   [Phase 5 → updated Phase 6]
+│   │   │   └── user_repository.py         [Authentication]
+│   │   │
 │   │   ├── db/
-│   │   │   ├── session.py                 [Phase 2]  ✅
-│   │   │   └── migrations/                [Phase 2, optional Alembic]
+│   │   │   └── session.py                 [Phase 2]
+│   │   │
 │   │   ├── core/
-│   │   │   └── config.py                  [Phase 1]  ✅
-│   │   └── utils/
-│   ├── ml_models/                          [Phase 6-9 store trained artifacts here]
+│   │   │   ├── config.py                  [Phase 1 → updated Authentication]
+│   │   │   ├── security.py                [Authentication]
+│   │   │   └── deps.py                    [Authentication]
+│   │   │
+│   │   └── utils/                          (empty — nothing needed here yet)
+│   │
+│   ├── ml_models/                          (empty dir — spam_model.pkl / scam_model.pkl /
+│   │                                         faiss_index.bin generated at runtime, gitignored)
 │   ├── dataset/
-│   │   └── messages.csv                   [Phase 3]  ✅ sample data
-│   ├── output/
-│   │   └── output.csv                     [Phase 5, generated]
-│   ├── requirements.txt                    [Phase 1]  ✅
-│   ├── Dockerfile                          [Phase 1]  ✅
-│   └── .env.example                        [Phase 1]  ✅
+│   │   └── messages.csv                   [Phase 3]
+│   │
+│   ├── output/                             (empty dir — output.csv generated at runtime)
+│   │
+│   ├── requirements.txt                    [Phase 1 → updated Authentication]
+│   ├── Dockerfile                          [Phase 1]
+│   └── .env.example                        [Phase 1 → updated Authentication]
 │
-├── frontend/                               [Phase 13] not started
-│   └── ... (built in Phase 13)
+├── frontend/                               [Phase 13 — not started]
 │
-├── chat_transcript/
-│   └── development_log.md                  [Phase 14, final packaging]
+├── chat_transcript/                        [Phase 14 — not started]
 │
-├── docker-compose.yml                       [Phase 1]  ✅
-├── .gitignore                               [Phase 1]  ✅
+├── docker-compose.yml                      [Phase 1]
+├── .gitignore                              [Phase 1]
 └── README.md
 ```
 
 ---
 
-## 5. TypeScript Types (for `frontend/lib/types.ts`, built in Phase 13)
+## 5. API Endpoints Built So Far
 
-```typescript
-export type Action = "Notify" | "Digest" | "Mute";
-export type MessageType = "text" | "image" | "voice";
-
-export interface Message {
-  id: string;
-  sender: string;
-  senderType: "contact" | "business" | "group";
-  content: string;
-  messageType: MessageType;
-  timestamp: string;
-  groupName?: string;
-  mediaUrl?: string;
-}
-
-export interface Prediction {
-  messageId: string;
-  action: Action;
-  messageType: MessageType;
-  reason: string;
-  confidenceScore: number;
-  evidenceMessageIds: string[];
-  businessTrustScore: number;
-  spamProbability: number;
-  scamProbability: number;
-  urgencyScore: number;
-}
-
-export interface AnalyticsSummary {
-  totalMessages: number;
-  actionBreakdown: Record<Action, number>;
-  avgConfidence: number;
-  topFlaggedSenders: { sender: string; scamProbability: number }[];
-}
-
-export interface OCRResult {
-  extractedText: string;
-  detectedLanguage?: string;
-  confidence: number;
-}
-
-export interface TranscriptionResult {
-  transcript: string;
-  language: string;
-  durationSeconds: number;
-}
-```
+| Method | Path | Phase |
+|---|---|---|
+| GET | `/api/v1/health`, `/api/v1/health/db` | 1 |
+| POST | `/api/v1/auth/register`, `/api/v1/auth/login` | Auth |
+| GET | `/api/v1/auth/me` (protected) | Auth |
+| POST | `/api/v1/upload` | 3 |
+| GET | `/api/v1/messages` | 3 |
+| GET | `/api/v1/features`, `/api/v1/features/{message_id}` | 4 |
+| POST | `/api/v1/predict`, `/api/v1/predict/batch` | 5 |
+| GET | `/api/v1/predict/{message_id}` | 5 |
+| GET | `/api/v1/export/output-csv` | 5 |
+| POST | `/api/v1/historical/rebuild-index` | 6 |
+| GET | `/api/v1/historical/similar` | 6 |
+| GET | `/api/v1/trust/{sender_id}` | 7 |
+| GET | `/api/v1/spam-check` | 8 |
+| GET | `/api/v1/scam-check` | 9 |
+| POST | `/api/v1/analyze/image` | 10 |
+| POST | `/api/v1/analyze/voice` | 11 |
 
 ---
 
-## 6. Do You Need External APIs?
+## 6. Known Tuning Points (honest, not hidden)
 
-Mostly **no** — Whisper, EasyOCR, Sentence-Transformers, and FAISS all run locally and free. Ideal for a hackathon: no billing, no rate limits, works offline.
-
-| Component | Default (Free, Local) | Optional Paid Alternative |
-|---|---|---|
-| Speech-to-Text | `openai-whisper` (local) | OpenAI Whisper API |
-| OCR | EasyOCR (local) | Google Cloud Vision API |
-| Embeddings | Sentence-Transformers (local) | OpenAI/Cohere embeddings API |
-| Similarity Search | FAISS (local) | Pinecone / Weaviate |
-| Classification | Scikit-learn (trained on your dataset) | — |
-
-If you want a paid API later, I'll walk you through getting the key when we reach that phase.
+A few messages land in boundary cases where scores are elevated but don't cross a threshold (e.g. a bank-impersonation scam scoring 35-48% instead of the 75% mute threshold). This is expected given the current heuristic+small-seed-classifier scoring — **Phase 15 (Optimization)** exists specifically to recalibrate thresholds once real usage data is available. Nothing here is silently broken; it's flagged so you know where to focus tuning later.
 
 ---
 
@@ -199,11 +177,25 @@ If you want a paid API later, I'll walk you through getting the key when we reac
 
 **Database:** PostgreSQL — locally via Docker Compose; free-tier hosted via **Neon** or **Supabase** for deployment (Phase 14).
 
-**Authentication:** Skipped for this build — the challenge is judged on the AI decision pipeline, not login screens. A single demo-user profile drives personalization instead.
+**Authentication:** Full JWT-based register/login/protected-route system (see Authentication section above), built ahead of the original plan once it became clear the frontend (Phase 13) needs real login screens. No Supabase/Firebase needed — this is a self-contained system.
 
 ---
 
-## 8. Free Hosting Plan (Phase 14)
+## 8. Do You Need External APIs?
+
+Mostly **no**. Sentence-Transformers, Whisper, and EasyOCR download free model weights on first use (needs internet once, no API key); scikit-learn's spam/scam classifiers train instantly offline.
+
+| Component | Default (Free, Local) | Optional Paid Alternative |
+|---|---|---|
+| Speech-to-Text | `openai-whisper` (local, one-time model download) | OpenAI Whisper API |
+| OCR | EasyOCR (local, one-time model download) | Google Cloud Vision API |
+| Embeddings | Sentence-Transformers (local, one-time model download) | OpenAI/Cohere embeddings API |
+| Similarity Search | FAISS (local, no download) | Pinecone / Weaviate |
+| Spam/Scam Classification | Scikit-learn (local, trains instantly) | — |
+
+---
+
+## 9. Free Hosting Plan (Phase 14)
 
 | Piece | Free Host |
 |---|---|
@@ -211,11 +203,11 @@ If you want a paid API later, I'll walk you through getting the key when we reac
 | Backend (FastAPI) | Render or Railway |
 | Database (Postgres) | Neon or Supabase |
 
-Full step-by-step deployment config (Dockerfile, `render.yaml`, Vercel env vars) comes in Phase 14, and we'll verify the live URL works end-to-end before calling it done.
+Full step-by-step deployment config comes in Phase 14, and we'll verify the live URL works end-to-end before calling it done.
 
 ---
 
-## 9. How to Run What's Built So Far
+## 10. How to Run What's Built So Far
 
 ```bash
 cd backend
@@ -224,8 +216,14 @@ cd ..
 docker compose up --build
 ```
 
-Then visit `http://localhost:8000/docs` for the interactive Swagger UI — you can upload `backend/dataset/messages.csv` there directly and see it ingested.
+Then visit `http://localhost:8000/docs` for the interactive Swagger UI. You can:
+- Register/login via `/auth/register` and `/auth/login`
+- Upload `backend/dataset/messages.csv` via `/upload`
+- Run `/predict/batch` to classify everything
+- Try `/analyze/image` and `/analyze/voice` with your own files (first call downloads the EasyOCR/Whisper models — needs internet once)
 
 ---
 
-## 10. Next Step
+## 11. Next Step
+
+Say **"next"** and I'll deliver **Phase 12: Analytics** — full working code plus updated zip.
