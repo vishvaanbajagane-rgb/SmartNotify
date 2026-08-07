@@ -4,40 +4,23 @@ SmartNotify AI — FastAPI entrypoint.
 Run locally:
     uvicorn app.main:app --reload --port 8000
 """
-
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes_health import router as health_router
-from app.api.routes_upload import router as upload_router
-
-# Phase 4
-from app.api.routes_features import router as features_router
-
-# Phase 5
-from app.api.routes_predict import router as predict_router
-from app.api.routes_export import router as export_router
-
-# Phase 6
-from app.api.routes_historical import router as historical_router
-
-# Phase 7
-from app.api.routes_trust import router as trust_router
-
-# Phase 8
-from app.api.routes_spam import router as spam_router
-
-# Phase 9
-from app.api.routes_scam import router as scam_router
-
-# Phase 10
-from app.api.routes_image import router as image_router
-
-# Optional authentication
 from app.api.routes_auth import router as auth_router
-
+from app.api.routes_export import router as export_router
+from app.api.routes_features import router as features_router
+from app.api.routes_health import router as health_router
+from app.api.routes_historical import router as historical_router
+from app.api.routes_image import router as image_router
+from app.api.routes_predict import router as predict_router
+from app.api.routes_scam import router as scam_router
+from app.api.routes_spam import router as spam_router
+from app.api.routes_trust import router as trust_router
+from app.api.routes_upload import router as upload_router
+from app.api.routes_voice import router as voice_router
 from app.core.config import get_settings
 from app.db.session import init_db
 
@@ -65,34 +48,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Core
+app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
 app.include_router(health_router, prefix=settings.API_V1_PREFIX)
 app.include_router(upload_router, prefix=settings.API_V1_PREFIX)
-
-# Phase 4
 app.include_router(features_router, prefix=settings.API_V1_PREFIX)
-
-# Phase 5
 app.include_router(predict_router, prefix=settings.API_V1_PREFIX)
 app.include_router(export_router, prefix=settings.API_V1_PREFIX)
-
-# Phase 6
 app.include_router(historical_router, prefix=settings.API_V1_PREFIX)
-
-# Phase 7
 app.include_router(trust_router, prefix=settings.API_V1_PREFIX)
-
-# Phase 8
 app.include_router(spam_router, prefix=settings.API_V1_PREFIX)
-
-# Phase 9
 app.include_router(scam_router, prefix=settings.API_V1_PREFIX)
-
-# Phase 10
 app.include_router(image_router, prefix=settings.API_V1_PREFIX)
+app.include_router(voice_router, prefix=settings.API_V1_PREFIX)
 
-# Authentication (optional)
-app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
+# --- Future phase routers (uncommented as each phase is built) ---
+# app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)    # Phase 12
 
 
 @app.get("/")
@@ -102,3 +72,7 @@ def root() -> dict:
         "docs": "/docs",
         "health": f"{settings.API_V1_PREFIX}/health",
     }
+
+from app.api.routes_analytics import router as analytics_router
+...
+app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)

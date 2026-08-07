@@ -212,3 +212,47 @@ class ImageAnalysisResponse(BaseModel):
     scam_probability: float
     spam_probability: float
     urgency_score: float
+
+class VoiceAnalysisResponse(BaseModel):
+    message_id: str
+    transcription: TranscriptionResult
+    action: Action
+    reason: str
+    confidence_score: float
+    scam_probability: float
+    spam_probability: float
+    urgency_score: float
+
+class ActionBreakdown(BaseModel):
+    Notify: int
+    Digest: int
+    Mute: int
+
+
+class FlaggedSender(BaseModel):
+    sender: str
+    scam_probability: float
+
+
+class MessageTypeBreakdown(BaseModel):
+    text: int
+    image: int
+    voice: int
+
+
+class DailyActionCount(BaseModel):
+    date: str
+    Notify: int
+    Digest: int
+    Mute: int
+
+
+class AnalyticsSummary(BaseModel):
+    total_messages: int
+    action_breakdown: ActionBreakdown
+    message_type_breakdown: MessageTypeBreakdown
+    avg_confidence: float
+    avg_scam_probability: float
+    avg_spam_probability: float
+    top_flagged_senders: list[FlaggedSender]
+    daily_action_counts: list[DailyActionCount]
