@@ -2,6 +2,7 @@
 Pydantic request/response schemas.
 Keep these in sync with frontend/lib/types.ts — they are the API contract.
 """
+
 from datetime import datetime
 from enum import Enum
 
@@ -60,11 +61,11 @@ class MessageOut(MessageBase):
 class PredictionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    message_id: str = Field(validation_alias="message_id")
+    message_id: str
     action: Action
     reason: str
     confidence_score: float = Field(ge=0.0, le=1.0)
-    evidence_message_ids: list[str] = []
+    evidence_message_ids: list[str] = Field(default_factory=list)
     business_trust_score: float = Field(ge=0.0, le=1.0)
     spam_probability: float = Field(ge=0.0, le=1.0)
     scam_probability: float = Field(ge=0.0, le=1.0)
@@ -114,6 +115,7 @@ class TranscriptionResult(BaseModel):
     language: str
     duration_seconds: float
 
+
 class MessageFeaturesOut(BaseModel):
     message_id: str
     text_length: int
@@ -138,7 +140,9 @@ class MessageFeaturesOut(BaseModel):
     message_type: str
     hour_of_day: int
     is_late_night: bool
-  class UploadResponse(BaseModel):
+
+
+class UploadResponse(BaseModel):
     filename: str
     rows_ingested: int
     rows_skipped: int
@@ -172,11 +176,6 @@ class SpamCheckOut(BaseModel):
     ml_spam_probability: float
 
 
-class ScamCheckOut(BaseModel):
-    content: str
-    ml_scam_probability: float
-
-
 class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
@@ -203,6 +202,11 @@ class TokenResponse(BaseModel):
     user: UserOut
 
 
+class ScamCheckOut(BaseModel):
+    content: str
+    ml_scam_probability: float
+
+
 class ImageAnalysisResponse(BaseModel):
     message_id: str
     ocr: OCRResult
@@ -212,56 +216,3 @@ class ImageAnalysisResponse(BaseModel):
     scam_probability: float
     spam_probability: float
     urgency_score: float
-
-class VoiceAnalysisResponse(BaseModel):
-    message_id: str
-    transcription: TranscriptionResult
-    action: Action
-    reason: str
-    confidence_score: float
-    scam_probability: float
-    spam_probability: float
-    urgency_score: float
-
-class ActionBreakdown(BaseModel):
-    Notify: int
-    Digest: int
-    Mute: int
-
-
-class FlaggedSender(BaseModel):
-    sender: str
-    scam_probability: float
-
-
-class MessageTypeBreakdown(BaseModel):
-    text: int
-    image: int
-    voice: int
-
-
-class DailyActionCount(BaseModel):
-    date: str
-    Notify: int
-    Digest: int
-    Mute: int
-
-
-class AnalyticsSummary(BaseModel):
-    total_messages: int
-    action_breakdown: ActionBreakdown
-    message_type_breakdown: MessageTypeBreakdown
-    avg_confidence: float
-    avg_scam_probability: float
-    avg_spam_probability: float
-    top_flagged_senders: list[FlaggedSender]
-    daily_action_counts: list[DailyActionCount]
-
-class MessageOut(MessageBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    sender_id: str
-    sender_name: str
-    sender_type: SenderType
-    timestamp: datetime
