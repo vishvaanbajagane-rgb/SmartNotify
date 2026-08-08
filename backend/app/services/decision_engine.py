@@ -28,10 +28,10 @@ from sqlalchemy.orm import Session
 
 from app.models.schemas import Action
 from app.services.business_trust import compute_business_trust_score
-from app.services.confidence_scoring import compute_confidence_score
+from app.services.confidence_scoring import compute_confidence
 from app.services.feature_engineering import (
     MessageFeatures,
-    extract_message_features,
+    extract_features,
 )
 from app.services.historical_retrieval import retrieve_similar_messages
 from app.services.reason_generator import generate_reason
@@ -39,10 +39,34 @@ from app.services.scam_detection import predict_scam_probability
 from app.services.spam_detection import predict_spam_probability
 
 
-def _clamp01(value: float) -> float:
-    """Keep a numeric value between 0 and 1."""
-    return max(0.0, min(1.0, float(value)))
+# -------------------------------------------------------------------
+# Utility
+# -------------------------------------------------------------------
 
+def _clamp01(value: float) -> float:
+    """Keep a value between 0 and 1."""
+    return max(0.0, min(1.0, value))
+
+
+# -------------------------------------------------------------------
+# Decision Result
+# -------------------------------------------------------------------
+
+@dataclass
+class DecisionResult:
+    action: Action
+    reason: str
+    confidence_score: float
+    evidence_message_ids: list[str]
+    business_trust_score: float
+    spam_probability: float
+    scam_probability: float
+    urgency_score: float
+
+
+# -------------------------------------------------------------------
+# Urgency
+# -------------------------------------------------------------------
 
 def compute_urgency_score(f: MessageFeatures) -> float:
     """
@@ -71,12 +95,16 @@ def compute_urgency_score(f: MessageFeatures) -> float:
     return round(_clamp01(score), 4)
 
 
+# -------------------------------------------------------------------
+# Spam
+# -------------------------------------------------------------------
+
 def compute_spam_probability(
     f: MessageFeatures,
     ml_spam_probability: float | None = None,
 ) -> float:
     """
-    Calculate spam probability using heuristics and optional ML output.
+    Combine heuristic spam detection with the ML spam detector.
     """
 
     score = 0.0
@@ -99,7 +127,7 @@ def compute_spam_probability(
     if ml_spam_probability is not None:
         blended = (
             0.5 * heuristic_score
-            + 0.5 * _clamp01(ml_spam_probability)
+            + 0.5 * ml_spam_probability
         )
     else:
         blended = heuristic_score
@@ -111,12 +139,16 @@ def compute_spam_probability(
     return round(_clamp01(blended), 4)
 
 
+# -------------------------------------------------------------------
+# Scam
+# -------------------------------------------------------------------
+
 def compute_scam_probability(
     f: MessageFeatures,
     ml_scam_probability: float | None = None,
 ) -> float:
     """
-    Calculate scam probability using heuristics and optional ML output.
+    Combine heuristic scam detection with the ML scam detector.
     """
 
     score = 0.0
@@ -142,7 +174,7 @@ def compute_scam_probability(
     if ml_scam_probability is not None:
         blended = (
             0.5 * heuristic_score
-            + 0.5 * _clamp01(ml_scam_probability)
+            + 0.5 * ml_scam_probability
         )
     else:
         blended = heuristic_score
@@ -154,21 +186,9 @@ def compute_scam_probability(
     return round(_clamp01(blended), 4)
 
 
-@dataclass
-class DecisionResult:
-    """
-    Final output of the SmartNotify AI decision engine.
-    """
-
-    action: Action
-    confidence: float
-    reason: str
-    urgency_score: float
-    spam_probability: float
-    scam_probability: float
-    business_trust_score: float
-    evidence_message_ids: list[str]
-
+# -------------------------------------------------------------------
+# Main Decision Engine
+# -------------------------------------------------------------------
 
 def decide(
     message: Any,
@@ -190,17 +210,19 @@ def decide(
     Scam Detection
         ↓
     Decision
+        ↓
+    Confidence + Explanation
     """
 
-    # ---------------------------------------------------------
-    # 1. FEATURE ENGINEERING
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Phase 4 — Feature Engineering
+    # ---------------------------------------------------------------
 
-    features = extract_message_features(message)
+    features = extract_features(message)
 
-    # ---------------------------------------------------------
-    # 2. HISTORICAL RETRIEVAL / FAISS
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Phase 6 — Historical Retrieval / FAISS
+    # ---------------------------------------------------------------
 
     evidence_message_ids: list[str] = []
     historical_similarity = 0.0
@@ -218,64 +240,57 @@ def decide(
                 for message_id in retrieval.evidence_message_ids
             ]
 
-            historical_similarity = _clamp01(
+            historical_similarity = float(
                 retrieval.average_similarity
             )
 
         except Exception:
-            # Historical retrieval must never break prediction.
+            # Historical retrieval must never crash prediction.
             evidence_message_ids = []
             historical_similarity = 0.0
 
-    # ---------------------------------------------------------
-    # 3. BUSINESS TRUST
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Phase 7 — Business Trust
+    # ---------------------------------------------------------------
 
     try:
         business_trust = compute_business_trust_score(
             db=db,
             sender=message.sender,
         )
-
-        business_trust = _clamp01(business_trust)
-
     except Exception:
-        # Safe fallback to feature-engineering trust score.
-        business_trust = _clamp01(
-            features.sender_trust_score
-        )
+        business_trust = features.sender_trust_score
 
-    # Update features so spam/scam scoring uses
-    # the calculated business trust.
+    business_trust = _clamp01(float(business_trust))
+
+    # Update feature trust score so Phase 8/9 can use it.
     features.sender_trust_score = business_trust
 
-    # ---------------------------------------------------------
-    # 4. SPAM DETECTION
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Phase 8 — Spam Detection
+    # ---------------------------------------------------------------
 
     try:
         ml_spam_probability = predict_spam_probability(
             message.content or ""
         )
-
     except Exception:
         ml_spam_probability = None
 
-    # ---------------------------------------------------------
-    # 5. SCAM DETECTION
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Phase 9 — Scam Detection
+    # ---------------------------------------------------------------
 
     try:
         ml_scam_probability = predict_scam_probability(
             message.content or ""
         )
-
     except Exception:
         ml_scam_probability = None
 
-    # ---------------------------------------------------------
-    # 6. FINAL SCORES
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Calculate final interpretable scores
+    # ---------------------------------------------------------------
 
     urgency_score = compute_urgency_score(features)
 
@@ -289,19 +304,22 @@ def decide(
         ml_scam_probability,
     )
 
-    business_trust_score = business_trust
+    business_trust_score = round(
+        business_trust,
+        4,
+    )
 
-    # ---------------------------------------------------------
-    # 7. PERSONALIZATION SIGNAL
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Personalization from historical messages
+    # ---------------------------------------------------------------
 
     personalization_bonus = (
         historical_similarity * 0.10
     )
 
-    # ---------------------------------------------------------
-    # 8. ACTION SCORES
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Routing scores
+    # ---------------------------------------------------------------
 
     notify_score = (
         urgency_score * 0.40
@@ -321,45 +339,49 @@ def decide(
         + (1.0 - business_trust_score) * 0.10
     )
 
-    # ---------------------------------------------------------
-    # 9. FINAL DECISION
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Final action
+    # ---------------------------------------------------------------
 
     # Scam has highest priority.
     if scam_probability >= 0.75:
         action = Action.MUTE
 
-    # Otherwise compare the three routing scores.
+    # Strong spam/scam combination.
     elif (
         mute_score >= notify_score
         and mute_score >= digest_score
     ):
         action = Action.MUTE
 
+    # Notify if notification score wins.
     elif notify_score >= digest_score:
         action = Action.NOTIFY
 
+    # Otherwise digest.
     else:
         action = Action.DIGEST
 
-    # ---------------------------------------------------------
-    # 10. CONFIDENCE
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Confidence
+    # ---------------------------------------------------------------
 
-    confidence = compute_confidence_score(
-        action=action,
-        urgency_score=urgency_score,
-        spam_probability=spam_probability,
-        scam_probability=scam_probability,
-        business_trust_score=business_trust_score,
-        historical_similarity=historical_similarity,
+    confidence_score = compute_confidence(
+    urgency_score,
+    scam_probability,
+    spam_probability,
+    business_trust_score,
+    features.is_verified_business,
+)
+
+    confidence_score = round(
+        _clamp01(float(confidence_score)),
+        4,
     )
 
-    confidence = _clamp01(confidence)
-
-    # ---------------------------------------------------------
-    # 11. HUMAN-READABLE REASON
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Human-readable explanation
+    # ---------------------------------------------------------------
 
     reason = generate_reason(
         action=action,
@@ -370,17 +392,17 @@ def decide(
         historical_similarity=historical_similarity,
     )
 
-    # ---------------------------------------------------------
-    # 12. RETURN RESULT
-    # ---------------------------------------------------------
+    # ---------------------------------------------------------------
+    # Return final result
+    # ---------------------------------------------------------------
 
     return DecisionResult(
         action=action,
-        confidence=round(confidence, 4),
         reason=reason,
-        urgency_score=urgency_score,
+        confidence_score=confidence_score,
+        evidence_message_ids=evidence_message_ids,
+        business_trust_score=business_trust_score,
         spam_probability=spam_probability,
         scam_probability=scam_probability,
-        business_trust_score=business_trust_score,
-        evidence_message_ids=evidence_message_ids,
+        urgency_score=urgency_score,
     )

@@ -176,3 +176,32 @@ def rebuild_index_from_messages(messages: list) -> int:
     index.add_batch(ids, contents)
     index.save()
     return len(ids)
+
+def retrieve_similar_messages(
+    content: str,
+    top_k: int = 5,
+    exclude_message_id: str | None = None,
+) -> list[SimilarMessage]:
+    """
+    Retrieve messages from the historical FAISS index that are
+    semantically similar to the supplied content.
+
+    This is the public helper used by the decision engine.
+    """
+
+    if not content or not content.strip():
+        return []
+
+    try:
+        index = get_historical_index()
+
+        return index.search(
+            content=content,
+            top_k=top_k,
+            exclude_message_id=exclude_message_id,
+        )
+
+    except Exception:
+        # Historical retrieval must never prevent a prediction
+        # from being generated.
+        return []

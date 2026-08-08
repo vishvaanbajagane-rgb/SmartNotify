@@ -91,6 +91,11 @@ class ActionBreakdown(BaseModel):
     Digest: int
     Mute: int
 
+class MessageTypeBreakdown(BaseModel):
+    text: int = 0
+    image: int = 0
+    voice: int = 0
+
 
 class FlaggedSender(BaseModel):
     sender: str
@@ -102,6 +107,17 @@ class AnalyticsSummary(BaseModel):
     action_breakdown: ActionBreakdown
     avg_confidence: float
     top_flagged_senders: list[FlaggedSender]
+
+class DailyActionCount(BaseModel):
+    date: str
+    notify: int = 0
+    digest: int = 0
+    mute: int = 0
+
+
+class AnalyticsResponse(BaseModel):
+    summary: AnalyticsSummary
+    daily: list[DailyActionCount] = Field(default_factory=list)
 
 
 class OCRResult(BaseModel):
@@ -216,3 +232,15 @@ class ImageAnalysisResponse(BaseModel):
     scam_probability: float
     spam_probability: float
     urgency_score: float
+
+class VoiceAnalysisResponse(BaseModel):
+    message_id: str
+    transcription: TranscriptionResult
+    action: Action
+    reason: str
+    confidence_score: float = Field(ge=0.0, le=1.0)
+    scam_probability: float = Field(ge=0.0, le=1.0)
+    spam_probability: float = Field(ge=0.0, le=1.0)
+    urgency_score: float = Field(ge=0.0, le=1.0)
+
+    
