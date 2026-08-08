@@ -31,4 +31,4 @@ services:
         condition: service_healthy
 
 volumes:
-  smartnotify_pgdata:x
+  smartnotify_pgdata:
