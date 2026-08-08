@@ -1,6 +1,7 @@
 """
 Data-access layer for predictions.
 """
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -19,11 +20,14 @@ def upsert_prediction(
     scam_probability: float,
     urgency_score: float,
 ) -> Prediction:
+
     existing = db.execute(
-        select(Prediction).where(Prediction.message_id == message_id)
+        select(Prediction).where(
+            Prediction.message_id == message_id
+        )
     ).scalar_one_or_none()
 
-    evidence_str = ",".join(evidence_message_ids)
+    evidence_str = ",".join(str(x) for x in evidence_message_ids)
 
     if existing:
         existing.action = action
@@ -34,6 +38,7 @@ def upsert_prediction(
         existing.spam_probability = spam_probability
         existing.scam_probability = scam_probability
         existing.urgency_score = urgency_score
+
         db.flush()
         return existing
 
@@ -48,16 +53,48 @@ def upsert_prediction(
         scam_probability=scam_probability,
         urgency_score=urgency_score,
     )
+
     db.add(prediction)
     db.flush()
+
     return prediction
 
 
-def get_prediction_by_message_id(db: Session, message_id: str) -> Prediction | None:
+def get_prediction_by_message_id(
+    db: Session,
+    message_id: str,
+) -> Prediction | None:
+
     return db.execute(
-        select(Prediction).where(Prediction.message_id == message_id)
+        select(Prediction).where(
+            Prediction.message_id == message_id
+        )
     ).scalar_one_or_none()
 
 
-def list_predictions(db: Session) -> list[Prediction]:
-    return list(db.execute(select(Prediction)).scalars().all())
+def list_predictions(
+    db: Session,
+) -> list[Prediction]:
+
+    return list(
+        db.execute(
+            select(Prediction)
+        ).scalars().all()
+    )
+
+
+def get_predictions_by_message_ids(
+    db: Session,
+    message_ids: list[str],
+) -> list[Prediction]:
+
+    if not message_ids:
+        return []
+
+    return list(
+        db.execute(
+            select(Prediction).where(
+                Prediction.message_id.in_(message_ids)
+            )
+        ).scalars().all()
+    )
