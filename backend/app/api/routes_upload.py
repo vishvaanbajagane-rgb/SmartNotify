@@ -55,3 +55,26 @@ def get_messages(
     db: Session = Depends(get_db),
 ) -> list[MessageOut]:
     return list_messages(db, limit=limit, offset=offset)
+
+@router.get("/messages", response_model=list[MessageOut])
+def get_messages(
+    limit: int = 100,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+) -> list[MessageOut]:
+    messages = list_messages(db, limit=limit, offset=offset)
+    return [
+        MessageOut(
+            id=m.id,
+            sender_id=m.sender_id,
+            sender_name=m.sender.name,
+            sender_type=m.sender.sender_type.value,
+            content=m.content,
+            message_type=m.message_type.value,
+            group_name=m.group_name,
+            media_url=m.media_url,
+            forward_count=m.forward_count,
+            timestamp=m.timestamp,
+        )
+        for m in messages
+    ]

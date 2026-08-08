@@ -87,3 +87,13 @@ def count_messages(db: Session) -> int:
 def list_messages(db: Session, limit: int = 100, offset: int = 0) -> list[Message]:
     stmt = select(Message).order_by(Message.timestamp.desc()).limit(limit).offset(offset)
     return list(db.execute(stmt).scalars().all())
+
+def list_messages(db: Session, limit: int = 100, offset: int = 0) -> list[Message]:
+    stmt = (
+        select(Message)
+        .options(joinedload(Message.sender))
+        .order_by(Message.timestamp.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(db.execute(stmt).scalars().all())

@@ -256,3 +256,12 @@ class AnalyticsSummary(BaseModel):
     avg_spam_probability: float
     top_flagged_senders: list[FlaggedSender]
     daily_action_counts: list[DailyActionCount]
+
+class MessageOut(MessageBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    sender_id: str
+    sender_name: str
+    sender_type: SenderType
+    timestamp: datetime
