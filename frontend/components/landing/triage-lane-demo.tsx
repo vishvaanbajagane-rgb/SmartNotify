@@ -36,9 +36,15 @@ const LANE_MESSAGES: LaneMessage[] = [
   },
 ];
 
-const LANE_META: Record
+const LANE_META: Record<
   Action,
-  { icon: typeof Bell; label: string; text: string; bg: string; border: string }
+  {
+    icon: typeof Bell;
+    label: string;
+    text: string;
+    bg: string;
+    border: string;
+  }
 > = {
   Notify: { icon: Bell, label: "Notify", text: "text-notify", bg: "bg-notify-dim", border: "border-notify/30" },
   Digest: { icon: Inbox, label: "Digest", text: "text-digest", bg: "bg-digest-dim", border: "border-digest/30" },
