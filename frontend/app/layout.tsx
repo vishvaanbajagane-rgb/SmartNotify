@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
+import {
+  Space_Grotesk,
+  Inter,
+  JetBrains_Mono,
+} from "next/font/google";
+
 import "./globals.css";
+
 import { PageFadeIn } from "@/components/shared/page-fade-in";
+import { DatasetSessionProvider } from "@/components/shared/dataset-session-provider";
 
 const displayFont = Space_Grotesk({
   subsets: ["latin"],
@@ -33,9 +40,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
+    <html
+      lang="en"
+      className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}
+    >
       <body>
-        <PageFadeIn>{children}</PageFadeIn>
+        <DatasetSessionProvider>
+          <PageFadeIn>{children}</PageFadeIn>
+        </DatasetSessionProvider>
       </body>
     </html>
   );
