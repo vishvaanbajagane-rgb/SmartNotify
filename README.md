@@ -211,7 +211,7 @@ DATABASE_URL="sqlite:///./test.db" pytest -v
 
 ---
 
-## 10. Remaining Work
+
 
 1. `chat_transcript/development_log.md` — final packaging deliverable from the original challenge brief.
 2. Real `docker build` verification (untestable in this dev sandbox).
