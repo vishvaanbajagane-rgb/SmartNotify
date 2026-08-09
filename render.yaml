@@ -22,8 +22,7 @@ services:
   - type: web
     name: smartnotify-backend
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+   
     plan: free
     healthCheckPath: /api/v1/health
     envVars:
