@@ -548,7 +548,7 @@ Ingestion
     ↓
 Feature Engineering
     ↓
-Historical Retrieval
+
     ↓
 Trust / Spam / Scam / Urgency Signals
     ↓
