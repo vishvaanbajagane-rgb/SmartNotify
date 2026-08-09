@@ -76,7 +76,11 @@ export function DownloadReportButton() {
         {downloading ? "Preparing report..." : "Download report"}
       </button>
 
-      
+      {error && (
+        <p className="max-w-xs text-right text-xs text-red-400">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
