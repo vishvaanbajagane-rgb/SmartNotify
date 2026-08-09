@@ -67,7 +67,7 @@ app.include_router(spam_router, prefix=settings.API_V1_PREFIX)
 app.include_router(scam_router, prefix=settings.API_V1_PREFIX)
 app.include_router(image_router, prefix=settings.API_V1_PREFIX)
 app.include_router(voice_router, prefix=settings.API_V1_PREFIX)
-app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)
+
 
 
 @app.get("/")
