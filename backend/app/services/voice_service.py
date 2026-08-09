@@ -6,7 +6,9 @@ Transcribes voice notes using OpenAI's Whisper (local, open-source model —
 the `base` size) from OpenAI's CDN on first use — free, no API key, but
 needs internet the first time (same one-time-download caveat as Phases 6
 and 10). The model is loaded lazily via `get_whisper_model()` so the app
-doesn't need it just to boot.
+doesn't need it just to boot, and that function is intentionally thin and
+swappable so this pipeline is unit-testable without waiting on the real
+model download.
 
 Whisper's Python API works on file paths, not raw bytes, so incoming audio
 is written to a temp file first (cleaned up in a `finally` block).
@@ -57,6 +59,8 @@ def transcribe_audio_bytes(audio_bytes: bytes, filename_hint: str = "audio.ogg")
         transcript = (result.get("text") or "").strip()
         language = result.get("language", "en")
 
+        # Whisper's result doesn't include duration directly in all versions;
+        # derive it from the last segment's end time when available.
         segments = result.get("segments") or []
         duration_seconds = segments[-1]["end"] if segments else 0.0
 

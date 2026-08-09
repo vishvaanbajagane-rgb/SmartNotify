@@ -4,7 +4,8 @@ Voice analysis endpoints (Phase 11).
 POST /analyze/voice — upload a voice note, transcribe it with Whisper
                        (Phase 11), then classify the transcript through the
                        same decision engine used for text and image
-                       messages.
+                       messages, so voice notes get the same
+                       Notify/Digest/Mute treatment.
 """
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -43,7 +44,7 @@ async def analyze_voice(
 
     try:
         extraction = transcribe_audio_bytes(audio_bytes, filename_hint=file.filename or "audio.ogg")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         raise HTTPException(
             status_code=503,
             detail=(

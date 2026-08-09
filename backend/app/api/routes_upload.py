@@ -1,8 +1,9 @@
 """
 Dataset ingestion endpoints.
 
-POST /upload   — upload a messages CSV (multipart/form-data), ingest it
-GET  /messages — list ingested messages (paginated)
+POST /upload         — upload a messages CSV (multipart/form-data), ingest it
+GET  /messages        — list ingested messages (paginated), useful for
+                         verifying an upload worked before moving to Phase 4
 """
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -47,14 +48,6 @@ async def upload_dataset(
         message=message,
     )
 
-
-@router.get("/messages", response_model=list[MessageOut])
-def get_messages(
-    limit: int = 100,
-    offset: int = 0,
-    db: Session = Depends(get_db),
-) -> list[MessageOut]:
-    return list_messages(db, limit=limit, offset=offset)
 
 @router.get("/messages", response_model=list[MessageOut])
 def get_messages(

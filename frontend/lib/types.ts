@@ -12,6 +12,8 @@ export interface Message {
   media_url: string | null;
   forward_count: number;
   sender_id: string;
+  sender_name: string;
+  sender_type: SenderType;
   timestamp: string;
 }
 

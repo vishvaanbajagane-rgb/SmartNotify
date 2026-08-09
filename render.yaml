@@ -1,0 +1,57 @@
+# Render Blueprint — deploys the FastAPI backend + a free Postgres database.
+#
+# Usage:
+#   1. Push this repo to GitHub.
+#   2. In the Render dashboard: New -> Blueprint -> connect this repo.
+#   3. Render reads this file and provisions both services automatically.
+#   4. Set CORS_ORIGINS (see below) once you know your Vercel frontend URL.
+#
+# Free tier notes (read before relying on this for a live demo):
+#   - Free web services SPIN DOWN after ~15 minutes of inactivity and take
+#     30-60s to cold-start on the next request. Fine for a hackathon judge
+#     who clicks around; not fine for a "always-instant" production promise.
+#   - Free tier has 512MB RAM. Whisper + EasyOCR + Sentence-Transformers
+#     models loaded together can get close to that ceiling under load.
+#     If you hit OOM kills, the cheapest fix is Render's paid "Starter"
+#     tier (more RAM), not code changes.
+#   - Free Postgres databases on Render expire after 90 days. Fine for a
+#     hackathon submission window, not for anything longer-lived — Neon or
+#     Supabase's free tiers don't have this expiry if you need permanence.
+
+services:
+  - type: web
+    name: smartnotify-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENV
+        value: production
+      - key: CORS_ORIGINS
+        value: https://your-frontend.vercel.app  # UPDATE after deploying frontend
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartnotify-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true  # Render generates a strong random secret for you
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: NOTIFY_CONFIDENCE_THRESHOLD
+        value: "0.65"
+      - key: SCAM_BLOCK_THRESHOLD
+        value: "0.75"
+      - key: SENTENCE_TRANSFORMER_MODEL
+        value: all-MiniLM-L6-v2
+      - key: WHISPER_MODEL_SIZE
+        value: base
+
+databases:
+  - name: smartnotify-db
+    plan: free
+    databaseName: smartnotify
+    user: smartnotify

@@ -54,8 +54,8 @@ export function Dropzone({ onUpload, uploading }: DropzoneProps) {
             Drag & drop your messages.csv, or click to browse
           </p>
           <p className="mt-1 text-xs text-text-muted">
-            Columns auto-detected: sender, content, sender_type, message_type, forward_count,
-            timestamp, is_verified_business
+            Columns auto-detected — works with WhatsApp exports, SMS/Twilio exports,
+            or generic sender/content CSVs. Only a sender name and message text are required.
           </p>
         </div>
       </div>

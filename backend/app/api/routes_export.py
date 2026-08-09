@@ -1,4 +1,3 @@
-
 """
 CSV export endpoint — generates the challenge-required output.csv from all
 stored predictions.

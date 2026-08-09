@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { PageFadeIn } from "@/components/shared/page-fade-in";
 
 const displayFont = Space_Grotesk({
   subsets: ["latin"],
@@ -33,7 +34,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
-      <body>{children}</body>
+      <body>
+        <PageFadeIn>{children}</PageFadeIn>
+      </body>
     </html>
   );
 }

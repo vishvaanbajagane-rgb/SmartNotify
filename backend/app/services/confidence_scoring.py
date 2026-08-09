@@ -26,8 +26,12 @@ def compute_confidence(
 
     confidence = avg_decisiveness
 
+    # A verified business sender is itself a strong, unambiguous signal —
+    # boost confidence slightly since we trust that classification a lot.
     if is_verified_business:
         confidence = min(1.0, confidence + 0.15)
 
+    # Keep confidence within a sane demo-friendly range: never 0, never
+    # falsely perfect at 1.0 unless truly maxed out.
     confidence = max(0.05, min(1.0, confidence))
     return round(confidence, 4)

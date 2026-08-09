@@ -2,12 +2,13 @@
 Pydantic request/response schemas.
 Keep these in sync with frontend/lib/types.ts — they are the API contract.
 """
-
 from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+
+# --- Enums (mirror db_models.py) ---
 
 class Action(str, Enum):
     NOTIFY = "Notify"
@@ -27,6 +28,8 @@ class MessageType(str, Enum):
     VOICE = "voice"
 
 
+# --- Sender ---
+
 class SenderOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -36,6 +39,8 @@ class SenderOut(BaseModel):
     trust_score: float
     is_verified_business: bool
 
+
+# --- Message ---
 
 class MessageBase(BaseModel):
     content: str
@@ -55,17 +60,21 @@ class MessageOut(MessageBase):
 
     id: str
     sender_id: str
+    sender_name: str
+    sender_type: SenderType
     timestamp: datetime
 
+
+# --- Prediction ---
 
 class PredictionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    message_id: str
+    message_id: str = Field(validation_alias="message_id")
     action: Action
     reason: str
     confidence_score: float = Field(ge=0.0, le=1.0)
-    evidence_message_ids: list[str] = Field(default_factory=list)
+    evidence_message_ids: list[str] = []
     business_trust_score: float = Field(ge=0.0, le=1.0)
     spam_probability: float = Field(ge=0.0, le=1.0)
     scam_probability: float = Field(ge=0.0, le=1.0)
@@ -73,6 +82,7 @@ class PredictionOut(BaseModel):
 
 
 class PredictionRequest(BaseModel):
+    """Used by POST /predict for a single ad-hoc message."""
     content: str
     sender_name: str
     sender_type: SenderType
@@ -86,15 +96,12 @@ class BatchPredictResponse(BaseModel):
     predictions: list[PredictionOut]
 
 
+# --- Analytics ---
+
 class ActionBreakdown(BaseModel):
     Notify: int
     Digest: int
     Mute: int
-
-class MessageTypeBreakdown(BaseModel):
-    text: int = 0
-    image: int = 0
-    voice: int = 0
 
 
 class FlaggedSender(BaseModel):
@@ -102,23 +109,31 @@ class FlaggedSender(BaseModel):
     scam_probability: float
 
 
-class AnalyticsSummary(BaseModel):
-    total_messages: int
-    action_breakdown: ActionBreakdown
-    avg_confidence: float
-    top_flagged_senders: list[FlaggedSender]
+class MessageTypeBreakdown(BaseModel):
+    text: int
+    image: int
+    voice: int
+
 
 class DailyActionCount(BaseModel):
     date: str
-    notify: int = 0
-    digest: int = 0
-    mute: int = 0
+    Notify: int
+    Digest: int
+    Mute: int
 
 
-class AnalyticsResponse(BaseModel):
-    summary: AnalyticsSummary
-    daily: list[DailyActionCount] = Field(default_factory=list)
+class AnalyticsSummary(BaseModel):
+    total_messages: int
+    action_breakdown: ActionBreakdown
+    message_type_breakdown: MessageTypeBreakdown
+    avg_confidence: float
+    avg_scam_probability: float
+    avg_spam_probability: float
+    top_flagged_senders: list[FlaggedSender]
+    daily_action_counts: list[DailyActionCount]
 
+
+# --- Media analysis ---
 
 class OCRResult(BaseModel):
     extracted_text: str
@@ -131,6 +146,8 @@ class TranscriptionResult(BaseModel):
     language: str
     duration_seconds: float
 
+
+# --- Upload ---
 
 class MessageFeaturesOut(BaseModel):
     message_id: str
@@ -156,40 +173,6 @@ class MessageFeaturesOut(BaseModel):
     message_type: str
     hour_of_day: int
     is_late_night: bool
-
-
-class UploadResponse(BaseModel):
-    filename: str
-    rows_ingested: int
-    rows_skipped: int
-    message: str
-
-
-class SimilarMessageOut(BaseModel):
-    message_id: str
-    content: str
-    similarity: float
-    past_action: str | None = None
-
-
-class HistoricalRebuildResponse(BaseModel):
-    messages_indexed: int
-    message: str
-
-
-class SenderTrustOut(BaseModel):
-    sender_id: str
-    sender_name: str
-    trust_score: float
-    message_count: int
-    mute_rate: float
-    notify_rate: float
-    basis: str
-
-
-class SpamCheckOut(BaseModel):
-    content: str
-    ml_spam_probability: float
 
 
 class UserCreate(BaseModel):
@@ -218,9 +201,61 @@ class TokenResponse(BaseModel):
     user: UserOut
 
 
+class RetrainExample(BaseModel):
+    text: str
+    label: int = Field(description="1 = positive class (spam/scam), 0 = negative")
+
+
+class RetrainRequest(BaseModel):
+    examples: list[RetrainExample]
+
+
+class RetrainResponse(BaseModel):
+    total_training_examples: int
+    message: str
+
+
 class ScamCheckOut(BaseModel):
     content: str
     ml_scam_probability: float
+
+
+class SpamCheckOut(BaseModel):
+    content: str
+    ml_spam_probability: float
+
+
+class SenderTrustOut(BaseModel):
+    sender_id: str
+    sender_name: str
+    trust_score: float
+    message_count: int
+    mute_rate: float
+    notify_rate: float
+    basis: str
+
+
+class SimilarMessageOut(BaseModel):
+    message_id: str
+    content: str
+    similarity: float
+    past_action: str | None = None
+
+
+class HistoricalRebuildResponse(BaseModel):
+    messages_indexed: int
+    message: str
+
+
+class VoiceAnalysisResponse(BaseModel):
+    message_id: str
+    transcription: TranscriptionResult
+    action: Action
+    reason: str
+    confidence_score: float
+    scam_probability: float
+    spam_probability: float
+    urgency_score: float
 
 
 class ImageAnalysisResponse(BaseModel):
@@ -233,14 +268,8 @@ class ImageAnalysisResponse(BaseModel):
     spam_probability: float
     urgency_score: float
 
-class VoiceAnalysisResponse(BaseModel):
-    message_id: str
-    transcription: TranscriptionResult
-    action: Action
-    reason: str
-    confidence_score: float = Field(ge=0.0, le=1.0)
-    scam_probability: float = Field(ge=0.0, le=1.0)
-    spam_probability: float = Field(ge=0.0, le=1.0)
-    urgency_score: float = Field(ge=0.0, le=1.0)
 
-    
+class UploadResponse(BaseModel):
+    filename: str
+    rows_ingested: int
+    message: str

@@ -25,6 +25,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(subject: str, expires_minutes: int | None = None) -> str:
+    """Create a JWT with `subject` (typically the user's id) as the `sub` claim."""
     expire_delta = timedelta(
         minutes=expires_minutes or settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
     )
@@ -34,6 +35,7 @@ def create_access_token(subject: str, expires_minutes: int | None = None) -> str
 
 
 def decode_access_token(token: str) -> str | None:
+    """Return the subject (user id) encoded in the token, or None if invalid/expired."""
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         return payload.get("sub")

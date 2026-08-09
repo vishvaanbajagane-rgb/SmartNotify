@@ -22,15 +22,22 @@ from sqlalchemy.orm import Session
 from app.models.db_models import MessageTypeEnum, SenderTypeEnum
 from app.repositories.message_repository import create_message, get_or_create_sender
 
+# Map our canonical field name -> list of acceptable column-name variants in the CSV
 COLUMN_ALIASES: dict[str, list[str]] = {
-    "sender": ["sender", "sender_name", "from", "contact", "name"],
-    "sender_type": ["sender_type", "type_of_sender", "chat_type"],
-    "content": ["content", "message", "text", "message_content", "body"],
-    "message_type": ["message_type", "msg_type", "media_type"],
+    "sender": [
+        "sender", "sender_name", "from", "contact", "name", "author",
+        "phone", "phone_number", "number", "username", "user", "sender_phone",
+    ],
+    "sender_type": ["sender_type", "type_of_sender", "chat_type", "contact_type"],
+    "content": [
+        "content", "message", "text", "message_content", "body", "msg",
+        "description", "text_content", "sms_body", "message_text",
+    ],
+    "message_type": ["message_type", "msg_type", "media_type", "type"],
     "group_name": ["group_name", "group", "chat_name"],
     "media_url": ["media_url", "media_path", "attachment", "file_url"],
-    "forward_count": ["forward_count", "forwards", "forwarded_times"],
-    "timestamp": ["timestamp", "date", "datetime", "sent_at"],
+    "forward_count": ["forward_count", "forwards", "forwarded_times", "num_forwards", "forward"],
+    "timestamp": ["timestamp", "date", "datetime", "sent_at", "time", "date_time", "created_at"],
     "is_verified_business": ["is_verified_business", "verified", "business_verified"],
 }
 
@@ -45,13 +52,23 @@ class IngestionResult:
     skip_reasons: list[str] = field(default_factory=list)
 
 
+def _normalize_column_name(name: str) -> str:
+    return name.lower().strip().replace(" ", "_").replace("-", "_")
+
+
 def _build_column_map(columns: list[str]) -> dict[str, str]:
-    lower_cols = {c.lower().strip(): c for c in columns}
+    """Return {canonical_field: actual_csv_column_name} for columns present in the CSV.
+
+    Column names are normalized (lowercased, spaces/hyphens -> underscores)
+    before matching, so "Phone Number", "phone-number", and "phone_number"
+    all resolve the same way.
+    """
+    normalized_cols = {_normalize_column_name(c): c for c in columns}
     resolved: dict[str, str] = {}
     for canonical, aliases in COLUMN_ALIASES.items():
         for alias in aliases:
-            if alias in lower_cols:
-                resolved[canonical] = lower_cols[alias]
+            if alias in normalized_cols:
+                resolved[canonical] = normalized_cols[alias]
                 break
     return resolved
 
@@ -94,6 +111,9 @@ def _parse_timestamp(raw):
 
 
 def ingest_dataframe(db: Session, df: pd.DataFrame) -> IngestionResult:
+    """Core ingestion logic, usable both from the /upload endpoint and from
+    a startup script that auto-loads dataset/messages.csv.
+    """
     result = IngestionResult()
 
     if df.empty:
@@ -176,10 +196,12 @@ def ingest_dataframe(db: Session, df: pd.DataFrame) -> IngestionResult:
 
 
 def ingest_csv_bytes(db: Session, file_bytes: bytes) -> IngestionResult:
+    """Parse raw CSV bytes (e.g. from an UploadFile) and ingest them."""
     df = pd.read_csv(io.BytesIO(file_bytes))
     return ingest_dataframe(db, df)
 
 
 def ingest_csv_path(db: Session, path: str) -> IngestionResult:
+    """Ingest a CSV file already on disk (used by the dataset auto-load)."""
     df = pd.read_csv(path)
     return ingest_dataframe(db, df)

@@ -21,6 +21,7 @@ def generate_reason(
     scam_probability: float,
     spam_probability: float,
     business_trust_score: float,
+    historical_summary: str | None = None,
 ) -> str:
     clauses: list[str] = []
 
@@ -49,9 +50,11 @@ def generate_reason(
     if features.forward_count >= 20 and scam_probability < 0.75:
         clauses.append(f"heavily forwarded ({features.forward_count}x), a common spam/scam signal")
 
+    if historical_summary:
+        clauses.append(historical_summary)
+
     if not clauses:
         clauses.append("no strong urgency, scam, or spam signals detected — routine message")
 
     prefix = ACTION_PREFIX[action]
     return f"{prefix} because {'; '.join(clauses)}."
-    

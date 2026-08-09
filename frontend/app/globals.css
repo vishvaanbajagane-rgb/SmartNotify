@@ -15,6 +15,7 @@
     @apply bg-notify/30 text-text-primary;
   }
 
+  /* Visible keyboard focus everywhere, per accessibility floor */
   :focus-visible {
     outline: 2px solid theme("colors.notify.DEFAULT");
     outline-offset: 2px;

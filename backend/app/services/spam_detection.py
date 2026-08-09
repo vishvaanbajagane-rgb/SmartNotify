@@ -3,8 +3,13 @@ Spam detection (Phase 8).
 
 A real trained classifier (TF-IDF + Logistic Regression) rather than only
 keyword heuristics. Trained on a small, hand-labeled seed dataset bundled
-with the code — works fully offline, cached to ml_models/spam_model.pkl
-after first training.
+with the code — works fully offline (scikit-learn needs no external
+download), and the model is cached to `ml_models/spam_model.pkl` after
+first training so subsequent app starts are instant.
+
+Phase 15 (Optimization) is the natural place to swap this seed dataset for
+a larger labeled corpus once real usage data accumulates — the interface
+(`predict_spam_probability`) doesn't need to change.
 """
 from __future__ import annotations
 
@@ -21,7 +26,11 @@ settings = get_settings()
 
 MODEL_PATH = os.path.join(settings.ML_MODELS_DIR, "spam_model.pkl")
 
+# --- Small hand-labeled seed dataset (label: 1 = spam, 0 = not spam) ---
+# Real, moderately diverse examples so the classifier learns useful patterns
+# beyond a single keyword list. Expand this as real labeled data comes in.
 SEED_TEXTS: list[str] = [
+    # spam
     "Buy now and get 50% off on all items, limited stock available!",
     "Exclusive deal just for you, shop now before offer ends",
     "Use promo code SAVE20 to get instant discount on your order",
@@ -32,6 +41,7 @@ SEED_TEXTS: list[str] = [
     "Limited time offer! Grab your discount coupon before stock runs out",
     "Join now and get a free gift card worth $50 on signup",
     "Unsubscribe anytime, but don't miss this exclusive promo code today",
+    # not spam
     "Hey, are we still meeting for coffee tomorrow morning?",
     "Can you send me the report before end of day?",
     "Happy birthday! Hope you have a wonderful day",
@@ -62,7 +72,7 @@ def _load_or_train_model() -> Pipeline:
         try:
             with open(MODEL_PATH, "rb") as f:
                 return pickle.load(f)
-        except Exception:
+        except Exception:  # noqa: BLE001 - corrupt cache, retrain
             pass
 
     model = _train_model()
@@ -83,16 +93,22 @@ def get_spam_model() -> Pipeline:
 
 
 def predict_spam_probability(content: str) -> float:
+    """Return P(spam) in [0, 1] for the given message text."""
     if not content or not content.strip():
         return 0.0
     model = get_spam_model()
     proba = model.predict_proba([content])[0]
+    # class order matches SEED_LABELS' sorted unique values: [0, 1]
     classes = list(model.classes_)
     spam_index = classes.index(1)
     return round(float(proba[spam_index]), 4)
 
 
 def retrain_from_examples(texts: list[str], labels: list[int]) -> int:
+    """Retrain the model on seed data plus additional labeled examples
+    (e.g. gathered from confirmed user feedback in a later phase).
+    Returns the total number of training examples used.
+    """
     global _model_instance
     all_texts = SEED_TEXTS + texts
     all_labels = SEED_LABELS + labels

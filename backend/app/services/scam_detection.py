@@ -6,9 +6,10 @@ Phase 8's spam detector but trained on a distinct seed set focused on scam
 patterns specifically: OTP/phishing requests, lottery/prize scams, bank
 impersonation, tech-support scams, and romance/investment scams — as
 opposed to spam's commercial-promotion patterns. Keeping scam and spam as
-separate classifiers matters because they call for different actions: spam
-typically -> Mute, but a scam impersonating a bank needs to be flagged more
-assertively since the harm is direct financial loss, not just annoyance.
+separate classifiers (rather than one shared model) matters because they
+call for different actions: spam typically -> Mute, but a scam impersonating
+a bank often needs to be flagged more assertively since the harm is direct
+financial loss, not just an annoying message.
 
 Works fully offline, cached to ml_models/scam_model.pkl after first training.
 """
@@ -27,7 +28,9 @@ settings = get_settings()
 
 MODEL_PATH = os.path.join(settings.ML_MODELS_DIR, "scam_model.pkl")
 
+# --- Seed dataset (label: 1 = scam, 0 = not scam) ---
 SEED_TEXTS: list[str] = [
+    # scam
     "Your OTP is 384921, share it now to verify your bank account immediately",
     "Congratulations! You have won a lottery of $50000, click here to claim your prize",
     "Your account will be suspended, verify your details now by clicking this link",
@@ -40,6 +43,7 @@ SEED_TEXTS: list[str] = [
     "Tech support alert: your computer is infected, call this number immediately for help",
     "We noticed unauthorized login to your account, confirm your password to secure it",
     "Your electricity will be disconnected today, pay immediately via this link to avoid",
+    # not scam
     "Hey, are we still meeting for coffee tomorrow morning?",
     "Can you send me the report before end of day?",
     "Your order has been shipped and will arrive in 3 to 5 business days",
@@ -70,7 +74,7 @@ def _load_or_train_model() -> Pipeline:
         try:
             with open(MODEL_PATH, "rb") as f:
                 return pickle.load(f)
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     model = _train_model()
@@ -91,6 +95,7 @@ def get_scam_model() -> Pipeline:
 
 
 def predict_scam_probability(content: str) -> float:
+    """Return P(scam) in [0, 1] for the given message text."""
     if not content or not content.strip():
         return 0.0
     model = get_scam_model()

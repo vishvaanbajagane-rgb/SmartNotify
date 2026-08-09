@@ -4,31 +4,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { ActionBadge } from "./action-badge";
 import type { PredictionRow } from "./prediction-table";
+import { ScoreBar } from "@/components/shared/score-bar";
 import { CHART_COLORS } from "@/lib/chart-colors";
-
-interface ScoreBarProps {
-  label: string;
-  value: number;
-  color: string;
-}
-
-function ScoreBar({ label, value, color }: ScoreBarProps) {
-  const pct = Math.round(value * 100);
-  return (
-    <div>
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-text-muted">{label}</span>
-        <span className="font-mono text-text-primary">{pct}%</span>
-      </div>
-      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-raised">
-        <div
-          className="h-full rounded-full transition-[width]"
-          style={{ width: `${pct}%`, backgroundColor: color }}
-        />
-      </div>
-    </div>
-  );
-}
 
 interface PredictionDetailsDrawerProps {
   row: PredictionRow | null;

@@ -1,9 +1,10 @@
 """
 Image analysis endpoints (Phase 10).
 
-POST /analyze/image — upload an image, run OCR, then classify the
-                       extracted text through the same decision engine
-                       used for text messages.
+POST /analyze/image — upload an image, run OCR (Phase 10), then classify
+                       the extracted text through the same decision engine
+                       used for text messages (Phase 5), so images get the
+                       same Notify/Digest/Mute treatment.
 """
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -39,7 +40,7 @@ async def analyze_image(
 
     try:
         extraction = extract_text_from_image_bytes(image_bytes)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         raise HTTPException(
             status_code=503,
             detail=(

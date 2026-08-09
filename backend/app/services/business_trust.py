@@ -10,7 +10,8 @@ score computed from the sender's actual history in the database:
   - average forward count (high = more likely bulk/broadcast, less "trusted 1:1")
 
 Falls back to the sender's static `trust_score` column when there isn't
-enough history yet (cold start).
+enough history yet (cold start), so behavior degrades gracefully for brand
+new senders instead of guessing wildly.
 """
 from __future__ import annotations
 
@@ -21,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.models.db_models import ActionEnum, Message, Prediction, Sender
 
-MIN_HISTORY_FOR_LEARNED_SCORE = 3
+MIN_HISTORY_FOR_LEARNED_SCORE = 3  # below this, trust the static default instead
 
 
 @dataclass
@@ -38,6 +39,7 @@ def _clamp01(x: float) -> float:
 
 
 def compute_sender_trust(db: Session, sender: Sender) -> BusinessTrustResult:
+    """Compute a trust score for a sender using their message + prediction history."""
     if sender.is_verified_business:
         return BusinessTrustResult(
             trust_score=max(0.85, sender.trust_score),
@@ -70,13 +72,14 @@ def compute_sender_trust(db: Session, sender: Sender) -> BusinessTrustResult:
     notify_rate = notify_count / total
     avg_forwards = sum(fc or 0 for _, fc in rows) / total
 
+    # Start from the sender's static prior, then adjust based on observed behavior.
     score = sender.trust_score
-    score += notify_rate * 0.3
-    score -= mute_rate * 0.4
+    score += notify_rate * 0.3          # mostly-notified senders are trustworthy
+    score -= mute_rate * 0.4            # mostly-muted senders are not
     if avg_forwards >= 15:
-        score -= 0.15
+        score -= 0.15                   # heavy forwarding correlates with bulk/spam senders
     if sender.sender_type.value == "business":
-        score -= 0.1
+        score -= 0.1                    # unverified businesses start with a small penalty
 
     return BusinessTrustResult(
         trust_score=_clamp01(score),
@@ -88,6 +91,11 @@ def compute_sender_trust(db: Session, sender: Sender) -> BusinessTrustResult:
 
 
 def compute_business_trust_score(db: Session | None, sender: Sender | None) -> float:
+    """Convenience wrapper used by the decision engine: just the score.
+
+    Falls back to the sender's static default (or 0.5 if no sender at all)
+    when `db` isn't provided, keeping decide() usable without a DB session.
+    """
     if sender is None:
         return 0.5
     if db is None:

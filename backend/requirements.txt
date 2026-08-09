@@ -1,31 +1,43 @@
+# --- Web framework ---
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 python-multipart==0.0.20
 pydantic==2.10.4
 pydantic-settings==2.7.1
+email-validator==2.2.0
 
+# --- Authentication ---
+# NOTE: passlib 1.7.4 is incompatible with bcrypt>=4.1 (raises a spurious
+# "password cannot be longer than 72 bytes" error on every hash). Pinning
+# bcrypt to 4.0.1 avoids this — confirmed by testing.
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-jose[cryptography]==3.3.0
+
+# --- Database ---
 sqlalchemy==2.0.36
-psycopg2-binary==2.9.12
+psycopg2-binary==2.9.10
 alembic==1.14.0
 
+# --- Data handling ---
 pandas==2.2.3
 numpy==1.26.4
 
+# --- ML / NLP (added as later modules need them) ---
 sentence-transformers==3.3.1
 faiss-cpu==1.9.0.post1
 scikit-learn==1.6.0
 
+# --- Speech-to-text ---
 openai-whisper==20240930
 ffmpeg-python==0.2.0
 
+# --- OCR / image processing ---
 easyocr==1.7.2
 opencv-python-headless==4.10.0.84
 
-# Utilities
-python-dotenv==1.0.1
-email-validator==2.2.0
+# --- Testing ---
+pytest==8.3.4
 
-# Authentication
-passlib[bcrypt]==1.7.4
-bcrypt==4.0.1
-python-jose[cryptography]==3.3.0
+# --- Utilities ---
+python-dotenv==1.0.1

@@ -3,12 +3,17 @@ SmartNotify AI — FastAPI entrypoint.
 
 Run locally:
     uvicorn app.main:app --reload --port 8000
+
+Modules will register their routers here as they're built:
+    routes_upload, routes_predict, routes_image, routes_voice,
+    routes_analytics, routes_export
 """
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes_analytics import router as analytics_router
 from app.api.routes_auth import router as auth_router
 from app.api.routes_export import router as export_router
 from app.api.routes_features import router as features_router
@@ -29,8 +34,10 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup: ensure tables exist (dev convenience; use Alembic in prod)
     init_db()
     yield
+    # Shutdown: nothing to clean up yet
 
 
 app = FastAPI(
@@ -60,9 +67,7 @@ app.include_router(spam_router, prefix=settings.API_V1_PREFIX)
 app.include_router(scam_router, prefix=settings.API_V1_PREFIX)
 app.include_router(image_router, prefix=settings.API_V1_PREFIX)
 app.include_router(voice_router, prefix=settings.API_V1_PREFIX)
-
-# --- Future phase routers (uncommented as each phase is built) ---
-# app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)    # Phase 12
+app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/")
@@ -72,7 +77,3 @@ def root() -> dict:
         "docs": "/docs",
         "health": f"{settings.API_V1_PREFIX}/health",
     }
-
-from app.api.routes_analytics import router as analytics_router
-...
-app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)

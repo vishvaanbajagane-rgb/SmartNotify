@@ -1,26 +1,19 @@
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-
+.pytest_cache/
 .venv/
 venv/
+*.egg-info/
 
 .env
-.env.*
+*.db
 
-.git/
+tests/
+ml_models/*.pkl
+ml_models/*.bin
+ml_models/*.json
+output/*.csv
+
+.git
 .gitignore
-
-node_modules/
-
-output/
-ml_models/
-
-.pytest_cache/
-.mypy_cache/
-
-.idea/
-.vscode/
-
-.DS_Store
+README.md

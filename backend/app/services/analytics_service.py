@@ -40,6 +40,7 @@ def _zero_message_type_counts() -> dict[str, int]:
 def compute_analytics(db: Session, top_flagged_limit: int = 5) -> AnalyticsResult:
     total_messages = db.execute(select(func.count(Message.id))).scalar_one()
 
+    # --- Action breakdown ---
     action_rows = db.execute(
         select(Prediction.action, func.count(Prediction.id)).group_by(Prediction.action)
     ).all()
@@ -47,6 +48,7 @@ def compute_analytics(db: Session, top_flagged_limit: int = 5) -> AnalyticsResul
     for action, count in action_rows:
         action_counts[action.value] = count
 
+    # --- Message type breakdown ---
     type_rows = db.execute(
         select(Message.message_type, func.count(Message.id)).group_by(Message.message_type)
     ).all()
@@ -54,6 +56,7 @@ def compute_analytics(db: Session, top_flagged_limit: int = 5) -> AnalyticsResul
     for message_type, count in type_rows:
         message_type_counts[message_type.value] = count
 
+    # --- Average scores ---
     avg_row = db.execute(
         select(
             func.avg(Prediction.confidence_score),
@@ -65,6 +68,7 @@ def compute_analytics(db: Session, top_flagged_limit: int = 5) -> AnalyticsResul
     avg_scam_probability = round(float(avg_row[1]), 4) if avg_row[1] is not None else 0.0
     avg_spam_probability = round(float(avg_row[2]), 4) if avg_row[2] is not None else 0.0
 
+    # --- Top flagged senders (highest average scam_probability, min 1 message) ---
     flagged_rows = db.execute(
         select(Sender.name, func.avg(Prediction.scam_probability).label("avg_scam"))
         .join(Message, Message.sender_id == Sender.id)
@@ -75,6 +79,7 @@ def compute_analytics(db: Session, top_flagged_limit: int = 5) -> AnalyticsResul
     ).all()
     top_flagged_senders = [(name, round(float(avg_scam), 4)) for name, avg_scam in flagged_rows]
 
+    # --- Daily action counts (trend line) ---
     daily_rows = db.execute(
         select(Message.timestamp, Prediction.action)
         .join(Prediction, Prediction.message_id == Message.id)

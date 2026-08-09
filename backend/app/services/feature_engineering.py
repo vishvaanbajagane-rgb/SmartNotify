@@ -8,6 +8,9 @@ that every later phase depends on:
   - Phase 7  (Business Trust)      reuses sender/content features
   - Phase 8  (Spam Detection)      trains on FEATURE_NAMES vectors
   - Phase 9  (Scam Detection)      trains on FEATURE_NAMES vectors
+
+Keeping this as a single, well-tested module means every downstream phase
+sees identical, consistent features — no duplicated regex/logic drift.
 """
 from __future__ import annotations
 
@@ -15,6 +18,8 @@ import re
 from dataclasses import asdict, dataclass, fields
 
 from app.models.db_models import Message, MessageTypeEnum, SenderTypeEnum
+
+# --- Keyword banks (small, hand-curated; Phases 8-9 will layer ML on top) ---
 
 URGENCY_KEYWORDS = [
     "urgent", "immediately", "asap", "act now", "act fast", "hurry",
@@ -40,6 +45,7 @@ URL_REGEX = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
 PHONE_REGEX = re.compile(r"\b\d{10,13}\b")
 CURRENCY_REGEX = re.compile(r"[$₹€£]|(\brs\.?\b)", re.IGNORECASE)
 
+# Hours considered "late night" for the is_late_night feature (24h clock)
 LATE_NIGHT_START_HOUR = 23
 LATE_NIGHT_END_HOUR = 6
 
@@ -48,13 +54,15 @@ LATE_NIGHT_END_HOUR = 6
 class MessageFeatures:
     message_id: str
 
+    # --- Text structure ---
     text_length: int
     word_count: int
     exclamation_count: int
     question_count: int
-    caps_ratio: float
-    digit_ratio: float
+    caps_ratio: float          # fraction of alphabetic chars that are uppercase
+    digit_ratio: float         # fraction of chars that are digits
 
+    # --- Content signals ---
     has_url: bool
     url_count: int
     has_phone_number: bool
@@ -64,15 +72,18 @@ class MessageFeatures:
     scam_keyword_count: int
     spam_keyword_count: int
 
-    sender_type: str
+    # --- Sender / context signals ---
+    sender_type: str            # contact | business | group
     is_group_message: bool
     is_business_sender: bool
     is_verified_business: bool
-    sender_trust_score: float
+    sender_trust_score: float   # 0-1, from Sender.trust_score
     forward_count: int
 
-    message_type: str
+    # --- Message type ---
+    message_type: str           # text | image | voice
 
+    # --- Temporal signals ---
     hour_of_day: int
     is_late_night: bool
 
@@ -80,6 +91,9 @@ class MessageFeatures:
         return asdict(self)
 
 
+# Canonical ordering of NUMERIC features for feeding into scikit-learn models
+# in Phases 8-9. Boolean fields are cast to 0/1, categorical fields excluded
+# here (handled via one-hot/encoding at model-training time).
 FEATURE_NAMES: list[str] = [
     "text_length", "word_count", "exclamation_count", "question_count",
     "caps_ratio", "digit_ratio", "has_url", "url_count", "has_phone_number",
@@ -156,7 +170,10 @@ def extract_features(message: Message) -> MessageFeatures:
 
 
 def feature_vector(features: MessageFeatures) -> list[float]:
-    """Numeric-only vector, in FEATURE_NAMES order, ready for sklearn."""
+    """Numeric-only vector, in FEATURE_NAMES order, ready for sklearn.
+
+    Booleans become 1.0/0.0.
+    """
     d = features.to_dict()
     vector: list[float] = []
     for name in FEATURE_NAMES:

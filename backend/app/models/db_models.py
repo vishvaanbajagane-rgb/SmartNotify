@@ -7,7 +7,14 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    Boolean, DateTime, Enum, Float, ForeignKey, Integer, String, Text,
+    Boolean,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,7 +42,10 @@ class MessageTypeEnum(str, enum.Enum):
     IMAGE = "image"
     VOICE = "voice"
 
+
 class User(Base):
+    """Registered user account. Kept intentionally simple — one demo profile
+    per person, whose UserPreference row (below) drives personalization."""
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
@@ -45,14 +55,17 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
+
 class Sender(Base):
+    """A contact, business, or group that sends messages."""
     __tablename__ = "senders"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     name: Mapped[str] = mapped_column(String, index=True)
     sender_type: Mapped[SenderTypeEnum] = mapped_column(Enum(SenderTypeEnum))
 
-    trust_score: Mapped[float] = mapped_column(Float, default=0.5)
+    # Trust / behavior signals, updated as the system learns
+    trust_score: Mapped[float] = mapped_column(Float, default=0.5)  # 0-1
     forward_count_avg: Mapped[float] = mapped_column(Float, default=0.0)
     is_verified_business: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -61,11 +74,12 @@ class Sender(Base):
 
 
 class Message(Base):
+    """A single incoming WhatsApp message (text, image, or voice)."""
     __tablename__ = "messages"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     sender_id: Mapped[str] = mapped_column(ForeignKey("senders.id"))
-    content: Mapped[str] = mapped_column(Text)
+    content: Mapped[str] = mapped_column(Text)  # raw text, or OCR/transcript text for media
     message_type: Mapped[MessageTypeEnum] = mapped_column(Enum(MessageTypeEnum), default=MessageTypeEnum.TEXT)
     group_name: Mapped[str | None] = mapped_column(String, nullable=True)
     media_url: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -77,6 +91,7 @@ class Message(Base):
 
 
 class Prediction(Base):
+    """The AI's routing decision for a given message, with full explainability."""
     __tablename__ = "predictions"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
@@ -84,8 +99,10 @@ class Prediction(Base):
 
     action: Mapped[ActionEnum] = mapped_column(Enum(ActionEnum))
     reason: Mapped[str] = mapped_column(Text)
-    confidence_score: Mapped[float] = mapped_column(Float)
+    confidence_score: Mapped[float] = mapped_column(Float)  # 0-1
 
+    # Evidence: comma-separated message IDs that influenced this decision
+    # (kept simple/portable; can move to a join table later if needed)
     evidence_message_ids: Mapped[str] = mapped_column(Text, default="")
 
     business_trust_score: Mapped[float] = mapped_column(Float, default=0.0)
@@ -103,23 +120,30 @@ class Prediction(Base):
 
 
 class UserPreference(Base):
+    """Personalization settings for the (single, demo) user."""
     __tablename__ = "user_preferences"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     user_label: Mapped[str] = mapped_column(String, default="demo_user")
 
+    # Simple tunable preferences, expandable later
     mute_groups_by_default: Mapped[bool] = mapped_column(Boolean, default=True)
     notify_verified_businesses: Mapped[bool] = mapped_column(Boolean, default=True)
     digest_low_urgency: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class InteractionHistory(Base):
+    """Tracks how the user has historically responded to a sender's messages.
+
+    Used by the historical retrieval service (Sentence-Transformers + FAISS)
+    to find similar past messages and how they were treated.
+    """
     __tablename__ = "interaction_history"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     sender_id: Mapped[str] = mapped_column(ForeignKey("senders.id"))
     message_content: Mapped[str] = mapped_column(Text)
-    embedding_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    embedding_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # FAISS vector index position
     past_action: Mapped[ActionEnum] = mapped_column(Enum(ActionEnum))
     was_opened: Mapped[bool] = mapped_column(Boolean, default=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Radio, Upload } from "lucide-react";
 import { Navbar } from "@/components/shared/navbar";
 import { TriageLaneDemo } from "@/components/landing/triage-lane-demo";
+import { WhatsAppNotificationDemo } from "@/components/landing/whatsapp-notification-demo";
 import { FeatureGrid } from "@/components/landing/feature-grid";
 
 export default function Home() {
@@ -53,6 +54,14 @@ export default function Home() {
         <TriageLaneDemo />
       </section>
 
+      {/* WhatsApp notification simulation */}
+      <section className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="mb-8 text-center">
+          <p className="text-sm text-text-muted">And here's what that actually looks like</p>
+        </div>
+        <WhatsAppNotificationDemo />
+      </section>
+
       {/* Feature grid */}
       <section className="mx-auto max-w-6xl px-6 pb-24">
         <h2 className="font-display text-2xl font-bold text-text-primary">
@@ -90,4 +99,3 @@ export default function Home() {
     </main>
   );
 }
-
