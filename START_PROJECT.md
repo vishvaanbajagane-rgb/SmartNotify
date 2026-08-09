@@ -1206,7 +1206,7 @@ The normal development workflow is:
 2. Start PostgreSQL with Docker Compose.
 3. Start FastAPI backend.
 4. Start Next.js frontend.
-
+5. Open `http://localhost:3000`.
 6. Use the application.
 7. Stop frontend/backend with `CTRL+C`.
 8. Stop PostgreSQL with `docker compose stop db`.
